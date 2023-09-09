@@ -1,0 +1,48 @@
+variant: fcos
+version: 1.1.0
+systemd:
+  units:
+    # Enable automatic console login for debugging
+    - name: serial-getty@tty1.service
+      dropins:
+      - name: autologin-core.conf
+        contents: |
+          [Service]
+          # Override Execstart in main unit
+          ExecStart=
+          # Add new Execstart with `-` prefix to ignore failure`
+          ExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM
+    - name: serial-getty@ttyS0.service
+      dropins:
+      - name: autologin-core.conf
+        contents: |
+          [Service]
+          # Override Execstart in main unit
+          ExecStart=
+          # Add new Execstart with `-` prefix to ignore failure`
+          ExecStart=-/usr/sbin/agetty --autologin core --noclear %I $TERM
+    - name: bootc-pull-install.service
+      enabled: true
+      contents: |
+        [Service]
+        EnvironmentFile=/etc/bootc-install.env
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/sh -c 'while ! podman image inspect $BOOTC_SOURCE_IMAGE; do podman pull $BOOTC_SOURCE_IMAGE; sleep 1; done'
+        [Install]
+        RequiredBy=multi-user.target
+    # This unit assumes that BOOTC_SOURCE_IMAGE and BOOTC_INSTALL_ARGS are set in the environment
+    # by a drop-in.
+    - name: run-bootc-install.service
+      enabled: true
+      contents: |
+        [Unit]
+        Requires=bootc-pull-install.service
+        After=bootc-pull-install.service
+        [Service]
+        EnvironmentFile=/etc/bootc-install.env
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=podman run --rm --privileged --pid=host --net=none --security-opt label=type:unconfined_t $BOOTC_SOURCE_IMAGE bootc install $BOOTC_INSTALL_ARGS
+        [Install]
+        RequiredBy=multi-user.target
