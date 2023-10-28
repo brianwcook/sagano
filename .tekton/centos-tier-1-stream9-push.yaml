@@ -17,8 +17,8 @@ metadata:
   namespace: project-sagano-tenant
 spec:
   params:
-  - name: dockerfile
-    value: Dockerfile
+  - name: image-file
+    value: centos-tier-1-stream9.yaml
   - name: git-url
     value: '{{repo_url}}'
   - name: output-image
@@ -77,10 +77,9 @@ spec:
         to build image.
       name: path-context
       type: string
-    - default: Dockerfile
-      description: Path to the Dockerfile inside the context specified by parameter
+    - description: Path to the image file inside the context specified by parameter
         path-context
-      name: dockerfile
+      name: image-file
       type: string
     - default: "false"
       description: Force rebuild image
@@ -202,31 +201,32 @@ spec:
         workspace: workspace
     - name: build-container
       params:
-      - name: IMAGE
-        value: $(params.output-image)
-      - name: DOCKERFILE
-        value: $(params.dockerfile)
-      - name: CONTEXT
-        value: $(params.path-context)
-      - name: HERMETIC
-        value: $(params.hermetic)
-      - name: PREFETCH_INPUT
-        value: $(params.prefetch-input)
-      - name: IMAGE_EXPIRES_AFTER
-        value: $(params.image-expires-after)
-      - name: COMMIT_SHA
-        value: $(tasks.clone-repository.results.commit)
+        - name: IMAGE
+          value: $(params.output-image)
+        - name: IMAGE_FILE
+          value: $(params.image-file)
+        - name: CONTEXT
+          value: $(params.path-context)
+        - name: IMAGE_EXPIRES_AFTER
+          value: $(params.image-expires-after)
+        - name: COMMIT_SHA
+          value: $(tasks.clone-repository.results.commit)
+        - name: PLATFORM
+          value: linux/arm64
+        - name: BUILDER_IMAGE
+          value: quay.io/bcook/arm-ostree-builder:latest
+
       runAfter:
       - prefetch-dependencies
       taskRef:
         params:
-        - name: name
-          value: buildah
-        - name: bundle
-          value: quay.io/redhat-appstudio-tekton-catalog/task-buildah:0.1@sha256:21cdb86ec6137c0bf234c37e12c5dab5190edc26413603dd062b73be7de2acfc
-        - name: kind
-          value: task
-        resolver: bundles
+        - name: url
+          value: https://github.com/stuartwdouglas/build-definitions/
+        - name: revision
+          value: rpm-ostree
+        - name: pathInRepo
+          value: task/rpm-ostree/0.1/rpm-ostree.yaml
+        resolver: git
       when:
       - input: $(tasks.init.results.build)
         operator: in
@@ -264,8 +264,6 @@ spec:
       params:
       - name: BASE_IMAGES_DIGESTS
         value: $(tasks.build-container.results.BASE_IMAGES_DIGESTS)
-      runAfter:
-      - build-container
       taskRef:
         params:
         - name: name
@@ -380,7 +378,7 @@ spec:
         - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: 10Gi
       status: {}
   - name: git-auth
     secret:
