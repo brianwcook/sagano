@@ -19,7 +19,7 @@ metadata:
 spec:
   params:
     - name: image-file
-      value: centos-tier-0-stream9.yaml
+      value: centos-tier-1-stream9.yaml
     - name: git-url
       value: '{{repo_url}}'
     - name: output-image
