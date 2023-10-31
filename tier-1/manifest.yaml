@@ -54,9 +54,9 @@ packages-ppc64le:
   - ppc64-diag-rtas
 packages-aarch64:
   - irqbalance
-  - qemu-user-static-x86
-packages-s390x:
-  - qemu-user-static-x86
+#  - qemu-user-static-x86
+#packages-s390x:
+#  - qemu-user-static-x86
 
 postprocess:
   # Undo RPM scripts enabling units; we want the presets to be canonical
